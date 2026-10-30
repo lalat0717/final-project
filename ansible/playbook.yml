@@ -1,0 +1,51 @@
+---
+- name: Setup Nginx Web Server on Ubuntu
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    # 1. Wait karo jab tak EC2 server ka SSH start na ho jaye
+    - name: Wait for SSH to be ready
+      ansible.builtin.wait_for_connection:
+        delay: 5
+        timeout: 180
+
+    # 2. System info gather karo
+    - name: Gather facts
+      ansible.builtin.gather_facts:
+
+    # 3. apt update chalao
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    # 4. Nginx install karo
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+
+    # 5. Nginx ko start karo aur boot pe enable karo
+    - name: Ensure Nginx is running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    # 6. index.html file ko /var/www/html/ par copy karo
+    - name: Deploy custom index.html
+      ansible.builtin.copy:
+        src: index.html
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
+      notify: Reload Nginx
+
+  handlers:
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
