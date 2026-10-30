@@ -1,9 +1,10 @@
 output "instance_public_ip" {
-  description = "EC2 Server ka Public IP"
+  description = "Public IP address of the deployed EC2 web server"
   value       = aws_instance.web.public_ip
 }
 
 output "web_url" {
-  description = "Website link"
+  description = "Live Website URL"
   value       = "http://${aws_instance.web.public_ip}"
 }
+
