@@ -1,0 +1,41 @@
+---
+- name: Wait for SSH connection to become ready
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 240
+
+- name: Gather facts once system is accessible
+  ansible.builtin.gather_facts:
+
+- name: Update apt repository cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install Nginx web server and curl
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - curl
+    state: present
+
+- name: Ensure Nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: "{{ nginx_service_state }}"
+    enabled: "{{ nginx_service_enabled }}"
+
+- name: Deploy custom index.html from Jinja2 template
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ web_root }}/index.html"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  notify: Reload Nginx
+
+- name: Verify Nginx is serving the website locally
+  ansible.builtin.uri:
+    url: "http://127.0.0.1"
+    return_content: false
+    status_code: 200
