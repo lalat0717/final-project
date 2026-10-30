@@ -1,0 +1,4 @@
+---
+web_root: "/var/www/html"
+nginx_service_state: started
+nginx_service_enabled: true
