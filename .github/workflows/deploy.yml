@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy:
-    name: Provision & Deploy Nginx on AWS
+    name: Provision EC2 in Default VPC & Deploy Web Server
     runs-on: ubuntu-latest
 
     env:
@@ -44,10 +44,8 @@ jobs:
           if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ] && [ -n "${{ secrets.SSH_PUBLIC_KEY }}" ]; then
             echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
             echo "${{ secrets.SSH_PUBLIC_KEY }}" > ~/.ssh/id_rsa.pub
-            echo "Using SSH keys from GitHub Secrets"
           else
             ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
-            echo "Generated ephemeral SSH key pair for runner"
           fi
           chmod 600 ~/.ssh/id_rsa
           chmod 644 ~/.ssh/id_rsa.pub
@@ -71,12 +69,13 @@ jobs:
           echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
           echo "web_url=http://$EC2_IP" >> $GITHUB_OUTPUT
 
-      - name: Configure and Deploy with Ansible
+      - name: Configure and Deploy with Ansible Role
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_ROLES_PATH: "ansible/roles"
         run: |
           EC2_IP="${{ steps.tf_apply.outputs.ec2_ip }}"
-          echo "Deploying to target IP: $EC2_IP"
+          echo "Deploying via Ansible role to target IP: $EC2_IP"
 
           ansible-playbook \
             -i "${EC2_IP}," \
@@ -87,7 +86,8 @@ jobs:
       - name: Print Deployment Summary
         run: |
           echo "### Deployment Successful!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Cloud Provider:** AWS EC2" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web Server:** Nginx" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cloud Provider:** AWS (Default VPC)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region:** \`${{ env.AWS_REGION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ansible Config:** Modular \`nginx\` Role" >> $GITHUB_STEP_SUMMARY
           echo "- **Server IP:** \`${{ steps.tf_apply.outputs.ec2_ip }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Live URL:** [http://${{ steps.tf_apply.outputs.ec2_ip }}](<http://${{ steps.tf_apply.outputs.ec2_ip }}>)" >> $GITHUB_STEP_SUMMARY
