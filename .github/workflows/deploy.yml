@@ -86,7 +86,7 @@ jobs:
 
       - name: Print Deployment Summary
         run: |
-          echo  Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Successful!" >> $GITHUB_STEP_SUMMARY
           echo "- **Cloud Provider:** AWS EC2" >> $GITHUB_STEP_SUMMARY
           echo "- **Web Server:** Nginx" >> $GITHUB_STEP_SUMMARY
           echo "- **Server IP:** \`${{ steps.tf_apply.outputs.ec2_ip }}\`" >> $GITHUB_STEP_SUMMARY
