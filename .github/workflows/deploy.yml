@@ -1,0 +1,93 @@
+name: CI/CD Infrastructure & Nginx Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Provision & Deploy Nginx on AWS
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      - name: Set up Python for Ansible
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Setup SSH Key Pair
+        id: ssh_key
+        run: |
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ] && [ -n "${{ secrets.SSH_PUBLIC_KEY }}" ]; then
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+            echo "${{ secrets.SSH_PUBLIC_KEY }}" > ~/.ssh/id_rsa.pub
+            echo "Using SSH keys from GitHub Secrets"
+          else
+            ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+            echo "Generated ephemeral SSH key pair for runner"
+          fi
+          chmod 600 ~/.ssh/id_rsa
+          chmod 644 ~/.ssh/id_rsa.pub
+          echo "pub_key_path=$HOME/.ssh/id_rsa.pub" >> $GITHUB_OUTPUT
+          echo "priv_key_path=$HOME/.ssh/id_rsa" >> $GITHUB_OUTPUT
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Terraform Apply
+        id: tf_apply
+        working-directory: terraform
+        run: |
+          PUB_KEY_CONTENT=$(cat ${{ steps.ssh_key.outputs.pub_key_path }})
+          terraform apply -auto-approve \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="ssh_public_key=${PUB_KEY_CONTENT}"
+          
+          EC2_IP=$(terraform output -raw instance_public_ip)
+          echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
+          echo "web_url=http://$EC2_IP" >> $GITHUB_OUTPUT
+
+      - name: Configure and Deploy with Ansible
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          EC2_IP="${{ steps.tf_apply.outputs.ec2_ip }}"
+          echo "Deploying to target IP: $EC2_IP"
+
+          ansible-playbook \
+            -i "${EC2_IP}," \
+            -u ubuntu \
+            --private-key "${{ steps.ssh_key.outputs.priv_key_path }}" \
+            ansible/playbook.yml
+
+      - name: Print Deployment Summary
+        run: |
+          echo  Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cloud Provider:** AWS EC2" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Server:** Nginx" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server IP:** \`${{ steps.tf_apply.outputs.ec2_ip }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Live URL:** [http://${{ steps.tf_apply.outputs.ec2_ip }}](<http://${{ steps.tf_apply.outputs.ec2_ip }}>)" >> $GITHUB_STEP_SUMMARY
