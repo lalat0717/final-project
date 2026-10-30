@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Web Server | Terraform & Ansible Automated</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #0B0F19;
+      --card-bg: rgba(18, 24, 38, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover-border: rgba(99, 102, 241, 0.4);
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      --accent: #06b6d4;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.3);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow-x: hidden;
+      padding: 2rem 1rem;
+    }
+
+    .ambient-glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(140px);
+      opacity: 0.22;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-1 { top: -100px; left: 10%; background: radial-gradient(circle, #6366f1, transparent); }
+    .glow-2 { bottom: -100px; right: 10%; background: radial-gradient(circle, #10b981, transparent); }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .hero-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2.75rem 2.5rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, #6366f1, #06b6d4, #10b981, transparent);
+    }
+
+    .badge-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      background-color: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--success-glow);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    .tag-cloud {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .role-badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .node-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .node-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #38bdf8;
+    }
+
+    .node-val {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 0.25rem;
+    }
+
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .stack-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .stack-card:hover {
+      border-color: var(--card-hover-border);
+      transform: translateY(-3px);
+    }
+
+    .stack-icon { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .stack-title { font-size: 1.05rem; font-weight: 700; color: #fff; }
+    .stack-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+
+    .arch-bar {
+      background: rgba(18, 24, 38, 0.5);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.25rem 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .arch-step { color: #38bdf8; font-weight: 600; }
+    .arch-arrow { color: rgba(255, 255, 255, 0.2); }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <div class="container">
+    <div class="hero-card">
+      <div class="badge-wrapper">
+        <div class="status-badge">
+          <div class="status-dot"></div>
+          Nginx 1.18+ Online
+        </div>
+        <div class="tag-cloud">AWS Default VPC (Ubuntu 22.04)</div>
+        <div class="role-badge">Ansible Role: nginx</div>
+      </div>
+
+      <h1>Infrastructure as Code & CI/CD Deployed</h1>
+      <p class="subtitle">
+        This server was automated with <strong>Terraform</strong> on AWS EC2, configured via modular <strong>Ansible Roles</strong>, and delivered through <strong>GitHub Actions</strong>.
+      </p>
+
+      <div class="node-box">
+        <div>
+          <div class="node-title">Server Hostname & IP:</div>
+          <div class="node-val">{{ ansible_hostname }} (IP: {{ ansible_default_ipv4.address }})</div>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); background: rgba(255, 255, 255, 0.05); padding: 0.4rem 0.8rem; border-radius: 8px;">
+          🌐 Port 80 Open via Security Group
+        </div>
+      </div>
+    </div>
+
+    <div class="stack-grid">
+      <div class="stack-card">
+        <div class="stack-icon">☁️</div>
+        <div class="stack-title">AWS EC2</div>
+        <div class="stack-desc">Ubuntu 22.04 LTS server running in AWS Default VPC with public IP.</div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-icon">🏗️</div>
+        <div class="stack-title">Terraform</div>
+        <div class="stack-desc">Provisions security group, key pair, and compute instance in ap-south-1.</div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-icon">📦</div>
+        <div class="stack-title">Ansible Role</div>
+        <div class="stack-desc">Modular role with tasks, handlers, templates, and defaults.</div>
+      </div>
+
+      <div class="stack-card">
+        <div class="stack-icon">🚀</div>
+        <div class="stack-title">GitHub Actions</div>
+        <div class="stack-desc">One-click automated deployment workflow running on push / button click.</div>
+      </div>
+    </div>
+
+    <div class="arch-bar">
+      <div class="arch-step">✔ 1. Run Workflow</div>
+      <div class="arch-arrow">➔</div>
+      <div class="arch-step">✔ 2. Terraform Apply</div>
+      <div class="arch-arrow">➔</div>
+      <div class="arch-step">✔ 3. Ansible Role (Nginx)</div>
+      <div class="arch-arrow">➔</div>
+      <div class="arch-step">✔ 4. Website Live</div>
+    </div>
+
+    <footer>
+      DevOps Automation &bull; AWS ap-south-1 Mumbai &bull; <span id="clock"></span>
+    </footer>
+  </div>
+
+  <script>
+    const clock = document.getElementById('clock');
+    if (clock) {
+      const update = () => clock.textContent = new Date().toUTCString();
+      update();
+      setInterval(update, 1000);
+    }
+  </script>
+</body>
+</html>
